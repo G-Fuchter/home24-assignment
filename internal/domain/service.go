@@ -11,10 +11,10 @@ import (
 var ErrInvlidPage = errors.New("URL is invalid or unreachable")
 
 type Service struct {
-	parser ports.WebPageParser
+	parser ports.DocumentParser
 }
 
-func NewService(p ports.WebPageParser) *Service {
+func NewService(p ports.DocumentParser) *Service {
 	return &Service{
 		parser: p,
 	}

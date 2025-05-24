@@ -1,6 +1,6 @@
 package ports
 
-type WebPageParser interface {
+type DocumentParser interface {
 	DownloadPage(location string) error
 	GetDocumentVersion() string
 	GetTitle() string
