@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewMyDocumentParser(t *testing.T) {
-	pr := parser.NewMyDocumentParser()
+	pr := parser.NewWebPageParser()
 
 	if pr == nil {
 		t.Fatal("NewMyDocumentParser() returned nil")
@@ -45,7 +45,7 @@ func TestFromString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prs := parser.NewMyDocumentParser()
+			prs := parser.NewWebPageParser()
 			err := prs.FromString(tt.content)
 
 			if tt.expectError && err == nil {
@@ -60,30 +60,76 @@ func TestFromString(t *testing.T) {
 }
 
 func TestGetDocumentVersion(t *testing.T) {
-	prsr := parser.NewMyDocumentParser()
 
 	// Test without loading document
-	version, err := prsr.GetDocumentVersion()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if version != "" {
-		t.Errorf("Expected empty string, got %q", version)
-	}
+	t.Run("should return error when no document is loaded", func(t *testing.T) {
+		prsr := parser.NewWebPageParser()
+		_, err := prsr.GetDocumentVersion()
+		if err != parser.ErrDocumentNotLoaded {
+			t.Fatalf("Expected document not loaded error to be return: %v", err)
+		}
+	})
 
-	// Test with loaded document
-	err = prsr.FromString("<html><head><title>Test</title></head></html>")
-	if err != nil {
-		t.Fatalf("Failed to load document: %v", err)
-	}
+	t.Run("should return error when there is no doctype", func(t *testing.T) {
+		prsr := parser.NewWebPageParser()
+		err := prsr.FromString("<html><head><title></title></head></html>")
+		if err != nil {
+			t.Fatalf("Failed to load document: %v", err)
+		}
 
-	version, err = prsr.GetDocumentVersion()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if version != "" {
-		t.Errorf("Expected empty string, got %q", version)
-	}
+		_, err = prsr.GetDocumentVersion()
+		if err != parser.ErrNoVersionFound {
+			t.Fatalf("Expected error was not returned: %v", err)
+		}
+
+	})
+	t.Run("should return correct html version", func(t *testing.T) {
+		tests := []struct {
+			name            string
+			html            string
+			expectedVersion string
+		}{
+			{
+				name:            "version 5",
+				html:            "<!DOCTYPE html><html><head><title>Test</title></head></html>",
+				expectedVersion: "5",
+			},
+			{
+				name:            "version 4.01",
+				html:            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><html><head><title>Test</title></head></html>",
+				expectedVersion: "4.01",
+			},
+			{
+				name:            "version 3.2",
+				html:            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"><html><head><title>Test</title></head></html>",
+				expectedVersion: "3.2",
+			},
+			{
+				name:            "version 2.0",
+				html:            "<!DOCTYPE html PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>Test</title></head></html>",
+				expectedVersion: "2.0",
+			},
+		}
+
+		prsr := parser.NewWebPageParser()
+		for _, tcase := range tests {
+			t.Run(tcase.name, func(t *testing.T) {
+				err := prsr.FromString(tcase.html)
+				if err != nil {
+					t.Fatalf("Failed to load document: %v", err)
+				}
+
+				actual, err := prsr.GetDocumentVersion()
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if actual != tcase.expectedVersion {
+					t.Fatalf("Expected %v version and returned %v", tcase.expectedVersion, actual)
+				}
+			})
+		}
+	})
 }
 
 func TestGetTitle(t *testing.T) {
@@ -116,7 +162,7 @@ func TestGetTitle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := parser.NewMyDocumentParser()
+			parser := parser.NewWebPageParser()
 			err := parser.FromString(tt.html)
 			if err != nil {
 				t.Fatalf("Failed to load document: %v", err)
@@ -144,7 +190,7 @@ func TestGetTitle(t *testing.T) {
 }
 
 func TestGetTitle_DocumentNotLoaded(t *testing.T) {
-	prsr := parser.NewMyDocumentParser()
+	prsr := parser.NewWebPageParser()
 
 	title, err := prsr.GetTitle()
 
@@ -162,7 +208,7 @@ func TestGetTitle_DocumentNotLoaded(t *testing.T) {
 }
 
 func TestGetExternalLinkCount(t *testing.T) {
-	parser := parser.NewMyDocumentParser()
+	parser := parser.NewWebPageParser()
 
 	count, err := parser.GetExternalLinkCount()
 	if err != nil {
@@ -174,7 +220,7 @@ func TestGetExternalLinkCount(t *testing.T) {
 }
 
 func TestGetInternalLinkCount(t *testing.T) {
-	parser := parser.NewMyDocumentParser()
+	parser := parser.NewWebPageParser()
 
 	count, err := parser.GetInternalLinkCount()
 	if err != nil {
@@ -186,7 +232,7 @@ func TestGetInternalLinkCount(t *testing.T) {
 }
 
 func TestGetContainsLogin(t *testing.T) {
-	parser := parser.NewMyDocumentParser()
+	parser := parser.NewWebPageParser()
 
 	contains, err := parser.GetContainsLogin()
 	if err != nil {
@@ -232,7 +278,7 @@ func TestHeaderCounts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := parser.NewMyDocumentParser()
+			parser := parser.NewWebPageParser()
 			err := parser.FromString(tt.html)
 			if err != nil {
 				t.Fatalf("Failed to load document: %v", err)
@@ -296,7 +342,7 @@ func TestHeaderCounts(t *testing.T) {
 }
 
 func TestHeaderCounts_DocumentNotLoaded(t *testing.T) {
-	prsr := parser.NewMyDocumentParser()
+	prsr := parser.NewWebPageParser()
 
 	tests := []struct {
 		name     string

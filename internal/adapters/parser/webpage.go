@@ -3,6 +3,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/antchfx/htmlquery"
@@ -14,13 +15,14 @@ var ErrCouldNotLoadDocument error = errors.New("could not load document")
 var ErrDocumentNotLoaded error = errors.New("document has not been loaded")
 var ErrFailedQuerying error = errors.New("failed to query document")
 var ErrElementNotFound error = errors.New("could not find element")
+var ErrNoVersionFound error = errors.New("could not find document version")
 
 type WebPageParser struct {
 	document    *html.Node
 	documentURL string
 }
 
-func NewMyDocumentParser() *WebPageParser {
+func NewWebPageParser() *WebPageParser {
 	return &WebPageParser{
 		documentURL: "",
 	}
@@ -49,8 +51,32 @@ func (p *WebPageParser) FromString(content string) error {
 
 // GetDocumentVersion implements the DocumentParser interface.
 func (p *WebPageParser) GetDocumentVersion() (string, error) {
-	// TODO: Add logic to retrieve the document version.
-	return "", nil // Empty string for now
+	if p.document == nil {
+		return "", ErrDocumentNotLoaded
+	}
+	doctypeNode := p.document.FirstChild
+	if doctypeNode.Type != html.DoctypeNode {
+		return "", ErrNoVersionFound
+	}
+
+	numOfAttributes := len(doctypeNode.Attr)
+	isVersionFive := numOfAttributes == 0
+	if isVersionFive {
+		return "5", nil
+	}
+
+	rx, err := regexp.Compile(`[Hh][Tt][Mm][Ll] ([0-9](\.[0-9][0-9]*)*)`)
+	if err != nil {
+		return "", err
+	}
+	rxResult := rx.FindAllStringSubmatch(doctypeNode.Attr[0].Val, -1)
+	if len(rxResult) == 0 {
+		return "", ErrNoVersionFound
+	}
+
+	version := rxResult[0][1]
+
+	return version, nil
 }
 
 // GetTitle implements the DocumentParser interface.
