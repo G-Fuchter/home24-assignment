@@ -39,7 +39,7 @@ My solution is comprised of a static website frontend connected to a RESTful API
 ```
 
 **Example API Call:**
-```json
+```bash
 curl -X POST \
   http://localhost:8080/reports/webpage \
   -H 'Content-Type: application/json' \
