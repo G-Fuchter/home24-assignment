@@ -66,8 +66,15 @@ func (s *Server) AddHandlers(h []Handler) error {
 	return nil
 }
 
-func (s *Server) Start() error {
+func (s *Server) EnableCORS() {
 	s.srv.Use(middleware.CORS())
+}
+
+func (s *Server) EnableStaticWebsite() {
+	s.srv.File("/", "static/index.html")
+}
+
+func (s *Server) Start() error {
 	port := s.cfg.Port
 	hostname := s.cfg.Hostname
 	return s.srv.Start(fmt.Sprintf("%v:%v", hostname, port))

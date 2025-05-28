@@ -19,6 +19,8 @@ func main() {
 	srv := http.NewServer(e, cfg)
 	handlers := getHandlers()
 	srv.AddHandlers(handlers)
+	srv.EnableCORS()
+	srv.EnableStaticWebsite()
 	err := srv.Start()
 	fmt.Print(err.Error())
 }
