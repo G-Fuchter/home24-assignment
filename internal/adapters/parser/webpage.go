@@ -84,7 +84,6 @@ func (p *WebPageParser) GetDocumentVersion() (string, error) {
 
 // GetTitle implements the DocumentParser interface.
 func (p *WebPageParser) GetTitle() (string, error) {
-	// TODO: Add logic to retrieve the document title.
 	doc := p.document
 	if doc == nil {
 		return "", ErrDocumentNotLoaded
@@ -182,7 +181,36 @@ func isLinkURLInternal(pageURL string, linkURL string) (bool, error) {
 
 // GetContainsLogin implements the DocumentParser interface.
 func (p *WebPageParser) GetContainsLogin() (bool, error) {
-	// TODO: Add logic to determine if the page contains a login form/button.
+	doc := p.document
+	if doc == nil {
+		return false, ErrDocumentNotLoaded
+	}
+	forms, err := htmlquery.QueryAll(doc, "//form")
+	if err != nil {
+		return false, err
+	}
+
+	for _, f := range forms {
+		inputs, err := htmlquery.QueryAll(f, "//input")
+		hasUserInput, hasPasswordInput := false, false
+		if err != nil {
+			return false, fmt.Errorf("could not retrieve login: %w", err)
+		}
+		for _, i := range inputs {
+			for _, attr := range i.Attr {
+				if attr.Key == "type" {
+					if attr.Val == "text" || attr.Val == "email" {
+						hasUserInput = true
+					} else if attr.Val == "password" {
+						hasPasswordInput = true
+					}
+				}
+			}
+		}
+		if hasUserInput && hasPasswordInput {
+			return true, nil
+		}
+	}
 	return false, nil // False for now
 }
 

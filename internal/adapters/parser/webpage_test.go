@@ -16,6 +16,7 @@ func TestNewMyDocumentParser(t *testing.T) {
 }
 
 func TestFromString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		content     string
@@ -60,6 +61,7 @@ func TestFromString(t *testing.T) {
 }
 
 func TestGetDocumentVersion(t *testing.T) {
+	t.Parallel()
 
 	// Test without loading document
 	t.Run("should return error when no document is loaded", func(t *testing.T) {
@@ -133,6 +135,7 @@ func TestGetDocumentVersion(t *testing.T) {
 }
 
 func TestGetTitle(t *testing.T) {
+	t.Parallel()
 	t.Run("should return error when document is not loaded", func(t *testing.T) {
 
 		prsr := parser.NewWebPageParser()
@@ -210,6 +213,7 @@ func TestGetTitle(t *testing.T) {
 }
 
 func TestGetExternalLinkCount(t *testing.T) {
+	t.Parallel()
 	t.Run("should return error when document is not loaded", func(t *testing.T) {
 
 		prsr := parser.NewWebPageParser()
@@ -293,6 +297,7 @@ func TestGetExternalLinkCount(t *testing.T) {
 }
 
 func TestGetInternalLinkCount(t *testing.T) {
+	t.Parallel()
 	t.Run("should return error when document is not loaded", func(t *testing.T) {
 
 		prsr := parser.NewWebPageParser()
@@ -376,9 +381,85 @@ func TestGetInternalLinkCount(t *testing.T) {
 }
 
 func TestGetContainsLogin(t *testing.T) {
+	t.Parallel()
+	t.Run("should return error when document is not loaded", func(t *testing.T) {
+
+		prsr := parser.NewWebPageParser()
+
+		_, err := prsr.GetContainsLogin()
+
+		if err == nil {
+			t.Fatalf("Expected error but got none")
+		}
+
+		if !errors.Is(err, parser.ErrDocumentNotLoaded) {
+			t.Fatalf("Expected ErrDocumentNotLoaded, got %v", err)
+		}
+
+	})
+
+	t.Run("should return true when html has a login form", func(t *testing.T) {
+		tests := []struct {
+			name            string
+			html            string
+			expectedOutcome bool
+		}{
+			{
+				name:            "contains a login form with user and password",
+				html:            `<html><body><form><input type="text"></input><input type="password"></input></form></body></html>`,
+				expectedOutcome: true,
+			},
+			{
+				name:            "contains a login form with email and password",
+				html:            `<html><body><form><input type="email"></input><input type="password"></input></form></body></html>`,
+				expectedOutcome: true,
+			},
+			{
+				name:            "contains form with email and no password",
+				html:            `<html><body><form><input type="email"></input></form></body></html>`,
+				expectedOutcome: false,
+			},
+			{
+				name:            "contains a form with only password",
+				html:            `<html><body><form><input type="password"></input></form></body></html>`,
+				expectedOutcome: false,
+			},
+			{
+				name:            "contains an empty form",
+				html:            `<html><body><form></form></body></html>`,
+				expectedOutcome: false,
+			},
+			{
+				name:            "contains no form",
+				html:            `<html><body></body></html>`,
+				expectedOutcome: false,
+			},
+		}
+
+		for _, tcase := range tests {
+			t.Run(tcase.name, func(t *testing.T) {
+				prsr := parser.NewWebPageParser()
+				err := prsr.FromString(tcase.html, "http://localhost")
+				if err != nil {
+					t.Fatalf("Unexpected error: could not load document")
+				}
+
+				result, err := prsr.GetContainsLogin()
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if result != tcase.expectedOutcome {
+					t.Fatalf("Expected outcome: %v, actual: %v", tcase.expectedOutcome, result)
+				}
+			})
+		}
+	})
+
 }
 
 func TestHeaderCounts(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		html    string
@@ -477,6 +558,7 @@ func TestHeaderCounts(t *testing.T) {
 }
 
 func TestHeaderCounts_DocumentNotLoaded(t *testing.T) {
+	t.Parallel()
 	prsr := parser.NewWebPageParser()
 
 	tests := []struct {
