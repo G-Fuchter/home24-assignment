@@ -31,10 +31,10 @@ func NewWebPageParser() *WebPageParser {
 }
 
 // DownloadPage implements the DocumentParser interface.
-func (p *WebPageParser) DownloadPage(location string) error {
+func (p *WebPageParser) DownloadDocument(location string) error {
 	var err error
 	p.documentURL = location
-	p.document, err = htmlquery.LoadURL("http://example.com/")
+	p.document, err = htmlquery.LoadURL(location)
 	if err != nil {
 		err = fmt.Errorf("%w: %w", ErrCouldNotLoadDocument, err)
 	}

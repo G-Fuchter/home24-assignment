@@ -7,8 +7,8 @@ import (
 )
 
 type Config struct {
-	hostname string
-	port     string
+	Hostname string
+	Port     string
 }
 
 type Server struct {
@@ -16,9 +16,10 @@ type Server struct {
 	cfg Config
 }
 
-func NewServer(srv *echo.Echo) *Server {
+func NewServer(srv *echo.Echo, config Config) *Server {
 	return &Server{
 		srv: srv,
+		cfg: config,
 	}
 }
 
@@ -64,8 +65,8 @@ func (s *Server) AddHandlers(h []Handler) error {
 	return nil
 }
 
-func (s *Server) Start(h []Handler) error {
-	port := s.cfg.port
-	hostname := s.cfg.hostname
-	return s.srv.Start(fmt.Sprintf("%v:%v", port, hostname))
+func (s *Server) Start() error {
+	port := s.cfg.Port
+	hostname := s.cfg.Hostname
+	return s.srv.Start(fmt.Sprintf("%v:%v", hostname, port))
 }
