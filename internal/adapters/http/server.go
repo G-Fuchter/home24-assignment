@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type Config struct {
@@ -66,6 +67,7 @@ func (s *Server) AddHandlers(h []Handler) error {
 }
 
 func (s *Server) Start() error {
+	s.srv.Use(middleware.CORS())
 	port := s.cfg.Port
 	hostname := s.cfg.Hostname
 	return s.srv.Start(fmt.Sprintf("%v:%v", hostname, port))

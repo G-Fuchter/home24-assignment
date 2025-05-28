@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Website Analyzer</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        #results {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 15px;
+            display: none; /* Hide by default */
+        }
+        #results p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Analyze a Website</h1>
+
+    <input type="text" id="urlInput" placeholder="Enter website URL">
+    <button id="analyzeButton">Analyze</button>
+
+    <div id="results">
+        <h2>Analysis Results</h2>
+        <p><strong>Document Version:</strong> <span id="docVersion"></span></p>
+        <p><strong>Title:</strong> <span id="siteTitle"></span></p>
+        <p><strong>External Link Count:</strong> <span id="externalLinks"></span></p>
+        <p><strong>Internal Link Count:</strong> <span id="internalLinks"></span></p>
+        <p><strong>Contains Login:</strong> <span id="containsLogin"></span></p>
+        <p><strong>Header One Count:</strong> <span id="h1Count"></span></p>
+        <p><strong>Header Two Count:</strong> <span id="h2Count"></span></p>
+        <p><strong>Header Three Count:</strong> <span id="h3Count"></span></p>
+        <p><strong>Header Four Count:</strong> <span id="h4Count"></span></p>
+        <p><strong>Header Five Count:</strong> <span id="h5Count"></span></p>
+        <p><strong>Header Six Count:</strong> <span id="h6Count"></span></p>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const resultsDiv = document.getElementById('results');
+
+        analyzeButton.addEventListener('click', async () => {
+            const url = urlInput.value;
+
+            if (!url) {
+                alert('Please enter a URL.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/reports/webpage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Display the results
+                document.getElementById('docVersion').textContent = data.documentVersion;
+                document.getElementById('siteTitle').textContent = data.title;
+                document.getElementById('externalLinks').textContent = data.externalLinkCount;
+                document.getElementById('internalLinks').textContent = data.internalLinkCount;
+                document.getElementById('containsLogin').textContent = data.containsLogin;
+                document.getElementById('h1Count').textContent = data.headerOneCount;
+                document.getElementById('h2Count').textContent = data.headerTwoCount;
+                document.getElementById('h3Count').textContent = data.headerThreeCount;
+                document.getElementById('h4Count').textContent = data.headerFourCount;
+                document.getElementById('h5Count').textContent = data.headerFiveCount;
+                document.getElementById('h6Count').textContent = data.headerSixCount;
+
+                resultsDiv.style.display = 'block'; // Show the results div
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while analyzing the website. Please check the URL and ensure the backend server is running.');
+                resultsDiv.style.display = 'none'; // Hide results on error
+            }
+        });
+    </script>
+</body>
+</html>
