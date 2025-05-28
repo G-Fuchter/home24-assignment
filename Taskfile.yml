@@ -5,9 +5,11 @@ version: '3'
 tasks:
   server:run:
     cmds:
+      - go mod download
       - go run cmd/server.go
   server:build:
     cmds:
+      - go mod download
       - go build -o build/server cmd/server.go
   docker:build:
     cmds:
