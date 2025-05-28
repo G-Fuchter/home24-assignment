@@ -1,0 +1,19 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  server:run:
+    cmds:
+      - go run cmd/server.go
+  server:build:
+    cmds:
+      - go build -o build/server cmd/server.go
+  docker:build:
+    cmds:
+      - docker build -t home24 -f container/Dockerfile .
+  docker:run:
+    cmds:
+      - docker run -p 8080:8080 home24
+  test:unit:
+    cmd: go test ./...
