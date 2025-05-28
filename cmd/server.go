@@ -13,7 +13,7 @@ import (
 func main() {
 	e := echo.New()
 	cfg := http.Config{
-		Hostname: "localhost",
+		Hostname: "",
 		Port:     "8080",
 	}
 	srv := http.NewServer(e, cfg)
