@@ -17,6 +17,8 @@ var ErrFailedQuerying error = errors.New("failed to query document")
 var ErrElementNotFound error = errors.New("could not find element")
 var ErrNoVersionFound error = errors.New("could not find document version")
 
+var regexHostnameURL = regexp.MustCompile(`^(https?:\/\/)?([^/?#:]+)`)
+
 type WebPageParser struct {
 	document    *html.Node
 	documentURL string
@@ -39,7 +41,8 @@ func (p *WebPageParser) DownloadPage(location string) error {
 	return err
 }
 
-func (p *WebPageParser) FromString(content string) error {
+func (p *WebPageParser) FromString(content string, url string) error {
+	p.documentURL = url
 	var err error
 	p.document, err = htmlquery.Parse(strings.NewReader(content))
 	if err != nil {
@@ -103,14 +106,78 @@ func (p *WebPageParser) GetTitle() (string, error) {
 
 // GetExternalLinkCount implements the DocumentParser interface.
 func (p *WebPageParser) GetExternalLinkCount() (int, error) {
-	// TODO: Add logic to count external links.
-	return 0, nil // Zero for now
+	if p.document == nil {
+		return 0, ErrDocumentNotLoaded
+	}
+	count := 0
+	links, err := getAllLinks(p.document)
+	if err != nil {
+		return 0, err
+	}
+	for _, link := range links {
+		isInternal, err := isLinkURLInternal(p.documentURL, link)
+		if err != nil {
+			return 0, err
+		}
+		if !isInternal {
+			count++
+		}
+	}
+	return count, nil
 }
 
 // GetInternalLinkCount implements the DocumentParser interface.
 func (p *WebPageParser) GetInternalLinkCount() (int, error) {
-	// TODO: Add logic to count internal links.
-	return 0, nil // Zero for now
+	if p.document == nil {
+		return 0, ErrDocumentNotLoaded
+	}
+	count := 0
+	links, err := getAllLinks(p.document)
+	if err != nil {
+		return 0, err
+	}
+	for _, link := range links {
+		isInternal, err := isLinkURLInternal(p.documentURL, link)
+		if err != nil {
+			return 0, err
+		}
+		if isInternal {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func getAllLinks(doc *html.Node) ([]string, error) {
+	links := []string{}
+	linkNodes, err := htmlquery.QueryAll(doc, "//a")
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range linkNodes {
+		attributes := node.Attr
+		for _, attr := range attributes {
+			if attr.Key == "href" {
+				links = append(links, attr.Val)
+			}
+		}
+	}
+	return links, nil
+}
+
+func isLinkURLInternal(pageURL string, linkURL string) (bool, error) {
+	if len(linkURL) > 0 && linkURL[0] == '/' {
+		return true, nil
+	}
+	linkHostname, err := getHostname(linkURL)
+	if err != nil {
+		return false, nil
+	}
+	pageHostname, err := getHostname(pageURL)
+	if err != nil {
+		return false, fmt.Errorf("the website's URL is not valid: %w", err)
+	}
+	return linkHostname == pageHostname, nil
 }
 
 // GetContainsLogin implements the DocumentParser interface.
@@ -167,4 +234,16 @@ func (p *WebPageParser) getElementCount(element string) (int, error) {
 	count := comp.Evaluate(htmlquery.CreateXPathNavigator(doc)).(float64)
 	return int(count), nil
 
+}
+
+func getHostname(url string) (string, error) {
+	match := regexHostnameURL.FindStringSubmatch(url)
+
+	if len(match) >= 3 {
+		// The base URL is in the first capturing group (index 1)
+		baseURL := match[2]
+		return baseURL, nil
+	} else {
+		return "", fmt.Errorf("URL: %s -> No hostname found", url)
+	}
 }

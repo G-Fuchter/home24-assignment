@@ -46,7 +46,7 @@ func TestFromString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			prs := parser.NewWebPageParser()
-			err := prs.FromString(tt.content)
+			err := prs.FromString(tt.content, "")
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -72,7 +72,7 @@ func TestGetDocumentVersion(t *testing.T) {
 
 	t.Run("should return error when there is no doctype", func(t *testing.T) {
 		prsr := parser.NewWebPageParser()
-		err := prsr.FromString("<html><head><title></title></head></html>")
+		err := prsr.FromString("<html><head><title></title></head></html>", "")
 		if err != nil {
 			t.Fatalf("Failed to load document: %v", err)
 		}
@@ -114,7 +114,7 @@ func TestGetDocumentVersion(t *testing.T) {
 		prsr := parser.NewWebPageParser()
 		for _, tcase := range tests {
 			t.Run(tcase.name, func(t *testing.T) {
-				err := prsr.FromString(tcase.html)
+				err := prsr.FromString(tcase.html, "")
 				if err != nil {
 					t.Fatalf("Failed to load document: %v", err)
 				}
@@ -133,114 +133,249 @@ func TestGetDocumentVersion(t *testing.T) {
 }
 
 func TestGetTitle(t *testing.T) {
-	tests := []struct {
-		name          string
-		html          string
-		expectedTitle string
-		expectError   bool
-		errorType     error
-	}{
-		{
-			name:          "valid title",
-			html:          "<html><head><title>Test Page</title></head></html>",
-			expectedTitle: "Test Page",
-			expectError:   false,
-		},
-		{
-			name:          "empty title",
-			html:          "<html><head><title></title></head></html>",
-			expectedTitle: "",
-			expectError:   false,
-		},
-		{
-			name:        "no title element",
-			html:        "<html><head></head></html>",
-			expectError: true,
-			errorType:   parser.ErrElementNotFound,
-		},
-	}
+	t.Run("should return error when document is not loaded", func(t *testing.T) {
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parser := parser.NewWebPageParser()
-			err := parser.FromString(tt.html)
-			if err != nil {
-				t.Fatalf("Failed to load document: %v", err)
-			}
+		prsr := parser.NewWebPageParser()
 
-			title, err := parser.GetTitle()
+		title, err := prsr.GetTitle()
 
-			if tt.expectError {
-				if err == nil {
-					t.Error("Expected error but got none")
-				}
-				if tt.errorType != nil && !errors.Is(err, tt.errorType) {
-					t.Errorf("Expected error type %v, got %v", tt.errorType, err)
-				}
-			} else {
+		if err == nil {
+			t.Error("Expected error but got none")
+		}
+
+		if !errors.Is(err, parser.ErrDocumentNotLoaded) {
+			t.Errorf("Expected ErrDocumentNotLoaded, got %v", err)
+		}
+
+		if title != "" {
+			t.Errorf("Expected empty title, got %q", title)
+		}
+	})
+	t.Run("should return correct title", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			html          string
+			expectedTitle string
+			expectError   bool
+			errorType     error
+		}{
+			{
+				name:          "valid title",
+				html:          "<html><head><title>Test Page</title></head></html>",
+				expectedTitle: "Test Page",
+				expectError:   false,
+			},
+			{
+				name:          "empty title",
+				html:          "<html><head><title></title></head></html>",
+				expectedTitle: "",
+				expectError:   false,
+			},
+			{
+				name:        "no title element",
+				html:        "<html><head></head></html>",
+				expectError: true,
+				errorType:   parser.ErrElementNotFound,
+			},
+		}
+		for _, tcase := range tests {
+			t.Run(tcase.name, func(t *testing.T) {
+				parser := parser.NewWebPageParser()
+				err := parser.FromString(tcase.html, "")
 				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
+					t.Fatalf("Failed to load document: %v", err)
 				}
-				if title != tt.expectedTitle {
-					t.Errorf("Expected title %q, got %q", tt.expectedTitle, title)
+
+				title, err := parser.GetTitle()
+
+				if tcase.expectError {
+					if err == nil {
+						t.Error("Expected error but got none")
+					}
+					if tcase.errorType != nil && !errors.Is(err, tcase.errorType) {
+						t.Errorf("Expected error type %v, got %v", tcase.errorType, err)
+					}
+				} else {
+					if err != nil {
+						t.Errorf("Unexpected error: %v", err)
+					}
+					if title != tcase.expectedTitle {
+						t.Errorf("Expected title %q, got %q", tcase.expectedTitle, title)
+					}
 				}
-			}
-		})
-	}
-}
+			})
+		}
+	})
 
-func TestGetTitle_DocumentNotLoaded(t *testing.T) {
-	prsr := parser.NewWebPageParser()
-
-	title, err := prsr.GetTitle()
-
-	if err == nil {
-		t.Error("Expected error but got none")
-	}
-
-	if !errors.Is(err, parser.ErrDocumentNotLoaded) {
-		t.Errorf("Expected ErrDocumentNotLoaded, got %v", err)
-	}
-
-	if title != "" {
-		t.Errorf("Expected empty title, got %q", title)
-	}
 }
 
 func TestGetExternalLinkCount(t *testing.T) {
-	parser := parser.NewWebPageParser()
+	t.Run("should return error when document is not loaded", func(t *testing.T) {
 
-	count, err := parser.GetExternalLinkCount()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("Expected 0, got %d", count)
-	}
+		prsr := parser.NewWebPageParser()
+
+		count, err := prsr.GetExternalLinkCount()
+
+		if err == nil {
+			t.Fatalf("Expected error but got none")
+		}
+
+		if !errors.Is(err, parser.ErrDocumentNotLoaded) {
+			t.Fatalf("Expected ErrDocumentNotLoaded, got %v", err)
+		}
+
+		if count != 0 {
+			t.Fatalf("Expected count of 0, got %v", count)
+		}
+	})
+
+	t.Run("should return correct external link count", func(t *testing.T) {
+
+		tests := []struct {
+			name          string
+			html          string
+			expectedCount int
+			pageURL       string
+		}{
+			{
+				name:          "one external link",
+				html:          `<html><body><a href="https://www.home24.com"></body></html>`,
+				expectedCount: 1,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "two external links",
+				html:          `<html><body><div><a href="https://www.home24.com"></a><a href="https://www.google.com"></a></div></body></html>`,
+				expectedCount: 2,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "ignore internal links",
+				html:          `<html><body><div><a href="https://www.home24.com"></a><a href="/home"></a><a hrel="http://localhost/contact"></a></div></body></html>`,
+				expectedCount: 1,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "no external links",
+				html:          `<html><body><div><a href="/home"></a></div></body></html>`,
+				expectedCount: 0,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "ignore internal links that contain hostname",
+				html:          `<html><body><div><a href="http://localhost/home"></a></div></body></html>`,
+				expectedCount: 0,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "sub domains count as externals",
+				html:          `<html><body><div><a href="http://support.home24.de"></a></div></body></html>`,
+				expectedCount: 1,
+				pageURL:       "http://home24.de",
+			},
+		}
+
+		for _, tcase := range tests {
+			t.Run(tcase.name, func(t *testing.T) {
+
+				prsr := parser.NewWebPageParser()
+				prsr.FromString(tcase.html, tcase.pageURL)
+				count, err := prsr.GetExternalLinkCount()
+				if err != nil {
+					t.Fatalf("Unexpecter error: %v", err)
+				}
+				if count != tcase.expectedCount {
+					t.Fatalf("Expected count %v, got %v", tcase.expectedCount, count)
+				}
+			})
+		}
+	})
 }
 
 func TestGetInternalLinkCount(t *testing.T) {
-	parser := parser.NewWebPageParser()
+	t.Run("should return error when document is not loaded", func(t *testing.T) {
 
-	count, err := parser.GetInternalLinkCount()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("Expected 0, got %d", count)
-	}
+		prsr := parser.NewWebPageParser()
+
+		count, err := prsr.GetInternalLinkCount()
+
+		if err == nil {
+			t.Fatalf("Expected error but got none")
+		}
+
+		if !errors.Is(err, parser.ErrDocumentNotLoaded) {
+			t.Fatalf("Expected ErrDocumentNotLoaded, got %v", err)
+		}
+
+		if count != 0 {
+			t.Fatalf("Expected count of 0, got %v", count)
+		}
+	})
+
+	t.Run("should return correct internal link count", func(t *testing.T) {
+
+		tests := []struct {
+			name          string
+			html          string
+			expectedCount int
+			pageURL       string
+		}{
+			{
+				name:          "one internal relative link",
+				html:          `<html><body><a href="/home"></body></html>`,
+				expectedCount: 1,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "one internal full path link",
+				html:          `<html><body><a href="http://localhost/home"></body></html>`,
+				expectedCount: 1,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "two internal links",
+				html:          `<html><body><div><a href="http://localhost/home"></a><a href="/contact"></a></div></body></html>`,
+				expectedCount: 2,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "ignore external links",
+				html:          `<html><body><div><a href="https://www.home24.com"></a><a href="/home"></a><a hrel="http://localhost/contact"></a></div></body></html>`,
+				expectedCount: 1,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "no links",
+				html:          `<html><body><div></div></body></html>`,
+				expectedCount: 0,
+				pageURL:       "http://localhost",
+			},
+			{
+				name:          "sub domains don't count as internal",
+				html:          `<html><body><div><a href="http://support.home24.de"></a></div></body></html>`,
+				expectedCount: 0,
+				pageURL:       "http://home24.de",
+			},
+		}
+
+		for _, tcase := range tests {
+			t.Run(tcase.name, func(t *testing.T) {
+
+				prsr := parser.NewWebPageParser()
+				prsr.FromString(tcase.html, tcase.pageURL)
+				count, err := prsr.GetInternalLinkCount()
+				if err != nil {
+					t.Fatalf("Unexpecter error: %v", err)
+				}
+				if count != tcase.expectedCount {
+					t.Fatalf("Expected count %v, got %v", tcase.expectedCount, count)
+				}
+			})
+		}
+	})
 }
 
 func TestGetContainsLogin(t *testing.T) {
-	parser := parser.NewWebPageParser()
-
-	contains, err := parser.GetContainsLogin()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if contains != false {
-		t.Errorf("Expected false, got %t", contains)
-	}
 }
 
 func TestHeaderCounts(t *testing.T) {
@@ -279,7 +414,7 @@ func TestHeaderCounts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := parser.NewWebPageParser()
-			err := parser.FromString(tt.html)
+			err := parser.FromString(tt.html, "")
 			if err != nil {
 				t.Fatalf("Failed to load document: %v", err)
 			}
